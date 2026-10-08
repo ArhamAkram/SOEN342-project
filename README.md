@@ -8,7 +8,7 @@
 | Name | Student ID | GitHub Username | Role |
 |------|------------|-----------------|------|
 | [Arham Akram] | [40224890] | [@ArhamAkram] | Team Leader |
-| [Full Name] | [ID] | [@username] | Member |
+| [Rohit Sengupta] | [ID] | [@reshinigami] | Member |
 | [Full Name] | [ID] | [@username] | Member |
 
 ## Repository Structure
