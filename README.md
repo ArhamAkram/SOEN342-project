@@ -9,7 +9,7 @@
 |------|------------|-----------------|------|
 | [Arham Akram] | [40224890] | [@ArhamAkram] | Team Leader |
 | [Rohit Sengupta] | [40247353] | [@reshinigami] | Member |
-| [Full Name] | [ID] | [@username] | Member |
+| [Bushr] | [ID] | [@username] | Member |
 
 ## Repository Structure
 - `docs/` – Requirements, UML diagrams, OCL specifications
