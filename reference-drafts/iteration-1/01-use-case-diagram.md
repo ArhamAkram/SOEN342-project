@@ -4,7 +4,7 @@
 **Deliverable covered:** Use-case diagram, including critical and non-critical
 use cases (iter1.pdf, Deliverables #1).
 **Sources:** Use cases, actors and FRs are taken exactly from
-`docs/iteration-1/requirement.md` §2, §3, §5. Status words and business rules
+`docs/iteration-1/requirement.md` #2, #3, #5. Status words and business rules
 come from reference draft 00 (assumptions A2–A8).
 
 ---
@@ -20,7 +20,7 @@ professional on their behalf (A8.3). They are still drawn as an actor for
 UC-08 because the use case exists because of them, with the association going
 through the entering user in practice; this is explained in §4.
 
-## 2. Actors (from requirement.md §2, resolved)
+## 2. Actors (from requirement.md #2, resolved)
 
 | Actor in diagram | Resolves requirement.md §2 entry | Notes |
 |---|---|---|
