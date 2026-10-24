@@ -155,6 +155,8 @@ Actor -> System : completeConsultation(consultationId)
 System --> Actor : consultationCompleted(appointmentStatus = Completed, consultationSummary)
 @enduml
 ```
+<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 41 57 PM" src="https://github.com/user-attachments/assets/9a65f8e5-e197-4018-8bd2-7d8322f0abf3" />
+
 
 ### 2.2 SSD — Failure scenario (patient not checked in; covers extension 4b, with 5a noted)
 
@@ -186,6 +188,8 @@ note over Actor, System
 end note
 @enduml
 ```
+<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 42 12 PM" src="https://github.com/user-attachments/assets/694228b1-03f7-44bb-9fee-fb3b05cfbe0d" />
+
 
 ### 2.3 System operations visible in these SSDs
 
