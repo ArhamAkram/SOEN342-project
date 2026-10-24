@@ -17,6 +17,6 @@
 
 ## Iterations
 - [x] Iteration 0 – Team setup and GitHub environment
-- [ ] Iteration I – System Modelling and Requirements Specification
+- [x] Iteration I – System Modelling and Requirements Specification
 - [ ] Iteration II
 - [ ] Iteration III
