@@ -139,6 +139,8 @@ Actor -> System : submitReferral(referralId)
 System --> Actor : referralSubmitted(referralId, status = Submitted)
 @enduml
 ```
+<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 43 09 PM" src="https://github.com/user-attachments/assets/7caa4720-fb26-4b6c-9823-458c0316c90d" />
+
 
 ### 2.2 SSD — Failure scenario (missing clinical reason; covers extension 3a)
 
@@ -171,6 +173,8 @@ note over Actor, System
 end note
 @enduml
 ```
+<img width="846" height="532" alt="Screenshot 2026-10-23 at 10 44 03 PM" src="https://github.com/user-attachments/assets/753e0223-bd0e-41d4-bccf-9ee49d4bf546" />
+
 
 ### 2.3 System operations visible in these SSDs
 
