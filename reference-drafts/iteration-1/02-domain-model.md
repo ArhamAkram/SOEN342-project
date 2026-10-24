@@ -260,14 +260,12 @@ HealthcareProfessional "1" -- "0..*" Consultation : conducts >
 @enduml
 ```
 
-*Note on the diagram source:* `HealthcareProfessional` appears both as a domain
-concept and (by generalisation) as a kind of `SystemUser`. In PlantUML that is
-rendered as one class with two parents shown in §2 (`SystemUser <|--
-HealthcareProfessional`). When redrawing in a graphical UML tool, keep it as a
-single class — duplicating it into “professional-as-person” and
-“professional-as-user” classes would break the traceability in §4.
-
 ---
+
+
+<img width="883" height="817" alt="Screenshot 2026-10-23 at 10 38 58 PM" src="https://github.com/user-attachments/assets/e5b2af29-d8c3-465d-a7af-471ef8503bcc" />
+
+
 
 ## 3. Explanation of key associations and multiplicities
 
