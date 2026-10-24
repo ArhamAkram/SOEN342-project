@@ -150,6 +150,8 @@ Actor -> System : confirmAppointment(appointmentId)
 System --> Actor : bookingConfirmed(appointmentId, status = Confirmed, dateTime, professional, location)
 @enduml
 ```
+<img width="843" height="520" alt="Screenshot 2026-10-23 at 10 40 04 PM" src="https://github.com/user-attachments/assets/55797460-bd37-4432-87f0-b13a8978d6c1" />
+
 
 ### 2.2 SSD — Failure scenario (referral required but invalid/expired; covers extensions 5a–5c)
 
@@ -185,6 +187,7 @@ note over Actor, System
 end note
 @enduml
 ```
+<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 41 04 PM" src="https://github.com/user-attachments/assets/04fe4ec7-91cd-414d-b440-ec1b441d5717" />
 
 ### 2.3 System operations visible in these SSDs
 
