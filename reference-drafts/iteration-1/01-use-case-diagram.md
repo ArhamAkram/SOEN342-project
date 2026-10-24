@@ -167,6 +167,9 @@ end note
 @enduml
 ```
 
+<img width="853" height="688" alt="Screenshot 2026-10-23 at 10 37 30 PM" src="https://github.com/user-attachments/assets/3305ca33-35d3-45c0-89c2-057f3638bb2f" />
+
+
 ## 5. Explanation of every include / extend
 
 **Includes (mandatory, always happen when the base use case runs):**
