@@ -20,7 +20,7 @@ A7.3 (priorities), A8.3 (external referrers are data, not users) from draft 00.
 | **Name** | Create Medical Referral |
 | **Scope** | Appointment Tracking System (ATS) — referral / consultation-request management |
 | **Level** | User goal |
-| **Primary Actor** | Healthcare Professional acting as Referring Professional; for an external physician, a clinic user enters the referral on the external professional's behalf (A8.3) |
+| **Primary Actor** | Healthcare Professional (as referrer). For an external physician — who is not an actor (A8.3) — Administrative Staff enter the referral on the physician's behalf (extension 6a). |
 | **Stakeholders and Interests** | **Patient:** is referred to the right specialty/professional, with a clear clinical reason, without having to carry paper or re-explain. **Referring Professional:** the referral is recorded completely (FR-22) and its status is trackable afterwards. **Requested Specialist / Professional:** receives enough clinical reason and priority information to accept and prioritise. **Clinic:** referrals are auditable, expire predictably (A4), and gate specialist bookings consistently in UC-02. |
 | **Preconditions** | 1. The entering actor is authenticated (internal referrer: `HEALTHCARE_PROFESSIONAL`; entering on behalf: also Administrative Staff may type in an external referral, but may not *author* one). 2. The patient is registered (UC-01) — otherwise extension 5a. 3. The referring professional is recorded in the system, internal or external (`isExternal` set accordingly, A8.3). |
 | **Success Guarantee (Postconditions)** | 1. A `Referral` exists for exactly one `Patient`, storing all FR-22 fields: referring professional, requested specialty and/or requested professional, clinical reason, priority, and `status`. 2. After submission its `status = Submitted`, so it is valid for booking under A4 (until accepted, expired, rejected, fulfilled or cancelled). 3. `issuedDate` and `expiryDate` are set per A4 rule 2. 4. `ActivityLog` entries record creation and submission (A6). |
@@ -116,7 +116,7 @@ A7.3 (priorities), A8.3 (external referrers are data, not users) from draft 00.
 
 ```plantuml
 @startuml
-actor "Healthcare Professional\n(Referring Professional)" as Actor
+actor "Healthcare Professional" as Actor
 participant ": ATS (System)" as System
 
 Actor -> System : searchPatient(searchCriteria)
@@ -146,7 +146,7 @@ System --> Actor : referralSubmitted(referralId, status = Submitted)
 
 ```plantuml
 @startuml
-actor "Healthcare Professional\n(Referring Professional)" as Actor
+actor "Healthcare Professional" as Actor
 participant ": ATS (System)" as System
 
 Actor -> System : searchPatient(searchCriteria)
