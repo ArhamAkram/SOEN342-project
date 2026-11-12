@@ -59,16 +59,18 @@ extension in UC-02 (file 03).
    `ClinicLocation` (FR-07, FR-08). Availability outside a scheduled block
    does not exist — there is no “free but not working” time.
 2. **No professional double-booking:** the professional has no other
-   appointment in status `Requested`, `Confirmed`, `CheckedIn` or
-   `InConsultation` overlapping the requested interval.
+   appointment in status `Confirmed`, `CheckedIn` or `InConsultation`
+   overlapping the requested interval. (`Requested` appointments do not
+   count: they hold no slot — see A7.1.)
 3. **No patient double-booking:** the patient has no other overlapping
    appointment (with any professional) in one of those same statuses.
 4. **Slot duration matches service type:** standard consultation = 30 minutes;
    initial specialist consultation = 60 minutes; nursing service = 15 minutes.
    A request whose duration does not match its service type is rejected, not
    silently adjusted.
-5. **Not in the past, not too far ahead:** start time must be in the future
-   and no more than **90 days** ahead.
+5. **Not in the past:** the slot's start time must be in the future. (No
+   maximum booking horizon is assumed: the project description defines none,
+   so the system does not invent one.)
 6. **Location consistency:** professional, schedule block and appointment must
    all name the same `ClinicLocation`.
 7. **Referral precondition:** if the service requires a referral (A3), a valid
@@ -203,12 +205,12 @@ Canonical vocabulary, used identically in files 01–06:
 
 | Status | Meaning | Entered when |
 |---|---|---|
-| `Requested` | Appointment asked for, checks not yet all passed / not yet confirmed | `requestAppointment(...)` succeeds (file 03) |
-| `Confirmed` | All A2 checks + A4 referral check (if applicable) passed; slot is reserved | `confirmAppointment(...)` |
+| `Requested` | Appointment asked for and checks passed at request time, but not yet confirmed. **Holds no slot**: the chosen slot is only recorded as the requested slot, and other bookings may still take it | `requestAppointment(...)` succeeds (file 03) |
+| `Confirmed` | All A2 checks + A4 referral check (if applicable) re-passed at confirmation; slot is now booked (this is the only moment a slot becomes booked) | `confirmAppointment(...)` succeeds |
 | `CheckedIn` | Patient's arrival registered on the day (UC-05 / FR-16) | Arrival registration |
 | `InConsultation` | Consultation in progress | `startConsultation(...)` (file 04) |
 | `Completed` | Consultation finished | `completeConsultation(...)` (file 04) |
-| `Cancelled` | Appointment cancelled (UC-04); slot released | Cancellation |
+| `Cancelled` | Appointment cancelled (UC-04), or its confirmation failed (file 03, extension 9a). If it was `Confirmed`, its slot is released; if it was `Requested`, there was no slot to release | Cancellation, or failed `confirmAppointment(...)` |
 | `NoShow` | Patient did not arrive and was not cancelled | End of appointment day, staff action |
 
 Notes:
