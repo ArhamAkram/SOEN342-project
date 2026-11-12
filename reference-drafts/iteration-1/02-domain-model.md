@@ -209,7 +209,7 @@ class Payment {
   paymentMethod : String
 }
 
-abstract class SystemUser {
+class SystemUser {
   userId : String
   username : String
   role : Role
@@ -220,7 +220,7 @@ class AdministrativeStaff {
 }
 
 SystemUser <|-- AdministrativeStaff
-SystemUser <|-- HealthcareProfessional
+HealthcareProfessional "1" -- "0..1" SystemUser : logs in as >
 
 class ActivityLog {
   logId : String
@@ -243,7 +243,8 @@ HealthcareProfessional "*" -- "*" ClinicLocation : practises at >
 HealthcareProfessional "1" -- "0..*" Schedule : works according to >
 Schedule "*" -- "1" ClinicLocation : at location >
 Schedule "1" -- "0..*" TimeSlot : offers >
-Appointment "0..1" -- "1" TimeSlot : occupies >
+Appointment "0..*" -- "1" TimeSlot : requests >
+Appointment "0..1" -- "0..1" TimeSlot : occupies >
 Appointment "1" -- "0..1" Consultation : results in >
 Consultation "1" -- "1" ClinicalRecord : documented by >
 Consultation "1" -- "0..*" Prescription : may issue >
@@ -290,14 +291,17 @@ many professionals). Both are many-to-many with no extra attributes worth a
 separate association class at analysis level.
 
 **HealthcareProfessional 1 — 0..\* Schedule; Schedule \* — 1 ClinicLocation;
-Schedule 1 — 0..\* TimeSlot; Appointment 0..1 — 1 TimeSlot.** A schedule block
-is always *at one location* — this is what makes A2 rule 1 and rule 6
-checkable (“the professional was working at that location at that time”). A
-`TimeSlot` is a concrete interval cut from a schedule block (A8.4). An
-appointment occupies exactly one slot; a slot is occupied by at most one
-appointment at a time (`0..1` on the Appointment end) — that single
-multiplicity *is* the no-double-booking rule for the professional (A2 rule 2)
-in model form. Patient double-booking (A2 rule 3) cannot be expressed by a
+Schedule 1 — 0..\* TimeSlot; Appointment 0..\* — 1 TimeSlot (requests);
+Appointment 0..1 — 0..1 TimeSlot (occupies).** A schedule block is always *at
+one location* — this is what makes A2 rule 1 and rule 6 checkable (“the
+professional was working at that location at that time”). A `TimeSlot` is a
+concrete interval cut from a schedule block (A8.4). Two associations separate
+*asking for* a slot from *holding* it (A7.1): every appointment **requests**
+exactly one slot, and several `Requested` appointments may request the same
+slot; but a slot is **occupied** by at most one appointment, and only once
+that appointment is `Confirmed` (`0..1` on both ends — a `Requested`
+appointment occupies nothing). The `0..1` on the occupying side *is* the
+no-double-booking rule for the professional (A2 rule 2) in model form. Patient double-booking (A2 rule 3) cannot be expressed by a
 multiplicity and is therefore stated as a constraint in UC-02's contract
 (file 03), which is the correct Larman place for it.
 
@@ -354,8 +358,16 @@ performed the operation (A6). Patient-access auditing additionally uses
   (and file 03's referral check) can be stated over a type, not over a free-text
   `professionalType` string; both are shown, and in your own redraw pick one
   mechanism and delete the other to avoid duplication.
-- `AdministrativeStaff` and `HealthcareProfessional` specialise `SystemUser`,
-  giving FR-28/FR-29 one place (`role`) to attach permissions.
+- `AdministrativeStaff` specialises `SystemUser`, giving FR-28/FR-29 one
+  place (`role`) to attach permissions.
+- `HealthcareProfessional` is **not** a subclass of `SystemUser`: it is linked
+  to it by `HealthcareProfessional 1 — 0..1 SystemUser` (“logs in as”).
+  Internal professionals have exactly one login; an external referring
+  physician (`isExternal = true`, A8.3) has none. A generalisation would have
+  forced every external physician to be a system user, contradicting A8.3 and
+  the use-case diagram (file 01), where external physicians are not actors.
+- There is no `ReferringProfessional` class or subtype: referring is a role
+  in the `refers (as referrer)` association, not a kind of professional.
 
 ### 4.2 What was *not* made a class, and why
 - **Availability** is not a class: it is derived from `Schedule` + `TimeSlot`
@@ -377,11 +389,11 @@ performed the operation (A6). Patient-access auditing additionally uses
 | FR-17–FR-20 | `Consultation`, `ClinicalRecord`, `Prescription`—`Medication`, follow-up via `Appointment` created from a consultation (file 04) |
 | FR-21–FR-24 | `Referral` + referrer / patient / requested-specialty / requested-professional / resulting-appointment associations |
 | FR-25–FR-27 | `Consultation.feeAmount`, `Invoice`, `Payment` (A5 roles enforced at operation level, files 03–06) |
-| FR-28–FR-30 | `SystemUser.role`, `AdministrativeStaff` specialisation, `ActivityLog` (A6) |
+| FR-28–FR-30 | `SystemUser.role`, `AdministrativeStaff` specialisation, `HealthcareProfessional` “logs in as” `SystemUser`, `ActivityLog` (A6) |
 | NFR-01/02, CON-01–03 | No classes — constraints on the whole model; honoured by A6 logging rule and by keeping RAMQ/pharmacy systems out of the model (A8.1) |
 
 ### 4.4 Authorized Clinical User
-Treated as `Role.AUTHORIZED_CLINICAL_USER` on `SystemUser`, normally held by a
-`HealthcareProfessional`. In contracts (files 04–05) “authorised clinical user”
+Treated as `Role.AUTHORIZED_CLINICAL_USER` on the `SystemUser` login of a
+`HealthcareProfessional` (via “logs in as”). In contracts (files 04–05) “authorised clinical user”
 checks are written as role checks, so an administrative user can never satisfy
 them — that is FR-29 expressed operationally.
