@@ -14,11 +14,11 @@ come from reference draft 00 (assumptions A2–A8).
 The boundary is the ATS software (CLI application, CON-01). Everything inside
 the rectangle in the diagram is software behaviour. RAMQ, pharmacies and
 provincial systems are **outside** the boundary and are not actors (A8.1,
-CON-03). An external referring physician is also outside the boundary: they
-never log in — their referral is entered by clinic staff / an internal
-professional on their behalf (A8.3). They are still drawn as an actor for
-UC-08 because the use case exists because of them, with the association going
-through the entering user in practice; this is explained in §4.
+CON-03). An external referring physician is also outside the boundary and is
+**not an actor**: they never log in — their referral is received by the
+clinic and entered on their behalf by Administrative Staff or an internal
+professional (A8.3). Inside the system they exist only as data: the
+`referringProfessional` of a `Referral`, flagged `isExternal = true`.
 
 ## 2. Actors (from requirement.md #2, resolved)
 
@@ -27,7 +27,7 @@ through the entering user in practice; this is explained in §4.
 | `Patient` | Patient | Requests/books own appointments; views own invoices (A5). |
 | `Administrative Staff` | Administrative Staff | Registration, appointments, arrivals, invoices, payments. No clinical access (FR-29). |
 | `Healthcare Professional` | Healthcare Professional **and** Authorized Clinical User | In the diagram these are one actor with clinical authorisation: requirement.md defines Authorized Clinical User as “a healthcare professional with permission…”, i.e. a role of Healthcare Professional, not a separate kind of person. Role/permission differences are enforced by FR-28 and recorded in the domain model (file 02, `SystemUser.role`), rather than by a second stick figure doing the same use cases twice. |
-| `Referring Professional` | Referring Professional | Generalisation shown in the diagram: a Healthcare Professional *as referrer*, and an `External Referring Professional` who does not practise at the clinic (FR-23). |
+| *(none)* | Referring Professional | **Not a separate actor.** “Referring” is a *role* a Healthcare Professional plays in UC-08, not a different kind of user, so Healthcare Professional is associated with UC-08 directly. An external referring physician (FR-23) never interacts with the system (A8.3) and therefore is not an actor at all; Administrative Staff is associated with UC-08 because they enter external referrals on the physician's behalf. See §5 “Why there is no actor generalisation”. |
 
 ## 3. Use-case list
 
@@ -42,7 +42,7 @@ through the entering user in practice; this is explained in §4.
 | UC-05 | Register Patient Arrival | Administrative Staff | FR-16 |
 | UC-06 | Conduct Consultation | Healthcare Professional | FR-17, FR-19, FR-20 |
 | UC-07 | Record Clinical Information | Healthcare Professional | FR-18 |
-| UC-08 | Create Medical Referral | Healthcare Professional (as Referring Professional) | FR-21–FR-24 |
+| UC-08 | Create Medical Referral | Healthcare Professional (Administrative Staff for external referrals entered on the physician's behalf) | FR-21–FR-24 |
 
 ### 3.2 Non-critical use cases (requirement.md §5.2)
 
@@ -80,11 +80,6 @@ skinparam packageStyle rectangle
 actor "Patient" as Patient
 actor "Administrative Staff" as Admin
 actor "Healthcare Professional" as HCP
-actor "Referring Professional" as Referrer
-actor "External Referring Professional" as ExtReferrer
-
-Referrer -up-|> HCP
-ExtReferrer -up-|> Referrer
 
 rectangle "Appointment Tracking System (ATS)" {
 
@@ -124,7 +119,8 @@ Patient --> UC04
 Admin --> UC05
 HCP --> UC06
 HCP --> UC07
-Referrer --> UC08
+HCP --> UC08
+Admin --> UC08
 Admin --> UC09
 Admin --> UC10
 HCP --> UC10
@@ -158,10 +154,11 @@ note bottom of LogActivity
   Arrows omitted for readability.
 end note
 
-note right of ExtReferrer
-  External physicians do not log in (A8.3).
-  Their referral is entered on their behalf;
-  they are recorded as referringProfessional
+note right of UC08
+  External physicians are not actors (A8.3):
+  they never log in. Administrative Staff
+  enter their referrals on their behalf; the
+  physician is recorded as referringProfessional
   with isExternal = true.
 end note
 @enduml
@@ -179,7 +176,7 @@ end note
   so it is an include, not an extend.
 - **UC-02 / UC-03 `<<include>>` Verify Scheduling Constraints** — the A2 rules
   (working schedule, no double-booking for professional *or* patient, slot
-  duration, booking window, location consistency) are likewise unconditional.
+  duration, not in the past, location consistency) are likewise unconditional.
   Kept separate from availability because FR-10 and FR-11 are separate
   requirements and fail for different reasons in UC-02's extensions.
 - **UC-02 `<<include>>` Verify Referral Requirement** — the *check* always
@@ -215,12 +212,23 @@ end note
   `requestFollowUpAppointment(...)`). Most consultations do not, so booking
   cannot be an include of UC-06.
 
-**Generalisation:** `Referring Professional` is a role a Healthcare
-Professional plays for UC-08, and `External Referring Professional`
-specialises it (FR-23). Modelling it as generalisation — rather than as an
-unrelated fifth person — is what lets file 02's domain model use one
-`HealthcareProfessional` class with an `isExternal` flag instead of two
-parallel class hierarchies.
+**Why there is no actor generalisation.** An earlier version drew
+`Referring Professional` as a specialisation of `Healthcare Professional`,
+and `External Referring Professional` as a specialisation of
+`Referring Professional`. That was wrong for two reasons:
+
+1. In a use-case diagram a child actor inherits **every** use case of its
+   parent. The chain therefore gave an external physician UC-06 Conduct
+   Consultation and UC-07 Record Clinical Information at our clinic, which
+   they can never perform.
+2. It contradicted A8.3 and §1 of this file: an external physician never
+   interacts with the system, so they cannot be an actor of any kind.
+
+“Referring” is a role a Healthcare Professional plays in one use case, and
+roles are shown by the association `Healthcare Professional — UC-08`, not by
+a new stick figure. The external case is covered by the association
+`Administrative Staff — UC-08` (entering on behalf) and, in the domain model
+(file 02), by the `isExternal` flag on the referring `HealthcareProfessional`.
 
 ## 6. What is deliberately NOT in the diagram
 
