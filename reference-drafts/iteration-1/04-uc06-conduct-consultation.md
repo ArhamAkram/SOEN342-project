@@ -1,12 +1,13 @@
-# Reference Draft 04 — UC-06 Conduct Consultation
+# Reference Draft 05 — UC-08 Create Medical Referral
 
 **Deliverables covered:** Fully dressed scenario (success + failure), SSDs for
 success and failure, system operations and operation contracts (iter1.pdf,
 Deliverables #3–#5).
-**Consistency anchors:** FR-17–FR-20, FR-28–FR-30 (requirement.md §3.4, §3.7);
-A5 (fee basis — professional records it, staff bill it), A6 (logging),
-A7.1 (appointment statuses), from draft 00; concepts from draft 02.
-UC-06 *includes* UC-07 Record Clinical Information (draft 01 §5).
+**Synonym used throughout the course brief:** referral = *consultation
+request*. One concept, one class (`Referral` in draft 02) — never two.
+**Consistency anchors:** FR-21–FR-24 (requirement.md §3.5); A3 (which services
+need referrals), A4 (validity), A6 (logging), A7.2 (referral statuses),
+A7.3 (priorities), A8.3 (external referrers are data, not users) from draft 00.
 **Operation names are canonical** — draft 06 reuses them unchanged.
 
 ---
@@ -15,104 +16,97 @@ UC-06 *includes* UC-07 Record Clinical Information (draft 01 §5).
 
 | Field | Content |
 |---|---|
-| **Use Case ID** | UC-06 |
-| **Name** | Conduct Consultation |
-| **Scope** | Appointment Tracking System (ATS) — clinical consultation and recording |
+| **Use Case ID** | UC-08 |
+| **Name** | Create Medical Referral |
+| **Scope** | Appointment Tracking System (ATS) — referral / consultation-request management |
 | **Level** | User goal |
-| **Primary Actor** | Healthcare Professional (acting as Authorized Clinical User for clinical data, FR-28) |
-| **Stakeholders and Interests** | **Patient:** receives care; their clinical information is recorded accurately and seen only by authorised professionals (NFR-01). **Healthcare Professional:** can record observations, diagnoses, treatment and follow-up efficiently, and issue prescriptions / follow-ups in the same flow. **Clinic / Administrative Staff:** the appointment is closed out correctly so billing for uninsured services (A5) and scheduling of follow-ups can proceed. **Regulators / clinic management (via audit):** every access to clinical information is attributable (FR-30, A6). |
-| **Preconditions** | 1. Actor is authenticated with role `HEALTHCARE_PROFESSIONAL` / `AUTHORIZED_CLINICAL_USER`. 2. An `Appointment` exists for the patient with `status = CheckedIn` (arrival registered in UC-05, FR-16). 3. The actor is the professional assigned to that appointment, or is otherwise authorised for that patient's clinical information (FR-28). |
-| **Success Guarantee (Postconditions)** | 1. A `Consultation` exists for the appointment, conducted by the actor, and the appointment's `status = Completed`. 2. Exactly one `ClinicalRecord` for that consultation contains observations, diagnoses, treatment recommendations and (if any) follow-up requirements (FR-18). 3. Any `Prescription` issued names ≥ 1 `Medication` (FR-19). 4. Any follow-up requirement that needs an appointment has produced a follow-up booking request (FR-20). 5. If the service was uninsured, the fee basis (`Consultation.feeAmount`) is recorded for Administrative Staff to invoice (A5). 6. `ActivityLog` entries record the consultation and every clinical-data access (A6). |
-| **Minimal Guarantee** | If the consultation cannot start, no `Consultation` or `ClinicalRecord` is created and the appointment keeps its prior status. If it cannot complete, work already recorded stays attached to a consultation in progress (appointment `InConsultation`) rather than being lost or marked completed falsely; the failure is logged. |
-| **Trigger** | The healthcare professional begins the consultation for a checked-in patient. |
+| **Primary Actor** | Healthcare Professional (as referrer). For an external physician — who is not an actor (A8.3) — Administrative Staff enter the referral on the physician's behalf (extension 6a). |
+| **Stakeholders and Interests** | **Patient:** is referred to the right specialty/professional, with a clear clinical reason, without having to carry paper or re-explain. **Referring Professional:** the referral is recorded completely (FR-22) and its status is trackable afterwards. **Requested Specialist / Professional:** receives enough clinical reason and priority information to accept and prioritise. **Clinic:** referrals are auditable, expire predictably (A4), and gate specialist bookings consistently in UC-02. |
+| **Preconditions** | 1. The entering actor is authenticated (internal referrer: `HEALTHCARE_PROFESSIONAL`; entering on behalf: also Administrative Staff may type in an external referral, but may not *author* one). 2. The patient is registered (UC-01) — otherwise extension 5a. 3. The referring professional is recorded in the system, internal or external (`isExternal` set accordingly, A8.3). |
+| **Success Guarantee (Postconditions)** | 1. A `Referral` exists for exactly one `Patient`, storing all FR-22 fields: referring professional, requested specialty and/or requested professional, clinical reason, priority, and `status`. 2. After submission its `status = Submitted`, so it is valid for booking under A4 (until accepted, expired, rejected, fulfilled or cancelled). 3. `issuedDate` and `expiryDate` are set per A4 rule 2. 4. `ActivityLog` entries record creation and submission (A6). |
+| **Minimal Guarantee** | A referral with a missing clinical reason or with no valid target (neither specialty nor professional) is never stored as `Submitted`. A referral left unsubmitted remains `Draft` and is explicitly *not* usable for booking in UC-02 (A4 rule 1). Failures are logged. |
+| **Trigger** | A professional decides a patient needs a consultation with another specialty/professional. |
 | **Main Success Scenario** | See below. |
-| **Extensions** | 4a appointment not found / wrong status, 4b patient not arrived, 5a actor not authorised, 8a prescription with no medication, 9a follow-up requested. |
-| **Special Requirements** | NFR-01 confidentiality: Administrative Staff must never satisfy this use case's authorisation checks (FR-29). A6: denied attempts are logged, not silently dropped. |
-| **Frequency** | Once per completed appointment. |
+| **Extensions** | 3a missing clinical reason, 4a invalid requested specialty, 4b invalid requested professional, 5a patient not found, 2a unauthorised referrer, 6a external referrer. |
+| **Special Requirements** | FR-22 completeness; A4 validity dates; NFR-01 — referral reasons are clinical data: Administrative Staff entering an external referral see only what they are entering, and may not read other referrals' reasons (FR-29). |
+| **Frequency** | Several per clinic day. |
 
 ### Main Success Scenario
 
-1. The professional opens the appointment for today's patient
-   (`getAppointment(appointmentId)`).
-2. The system displays the appointment summary (patient identity, service
-   type, time, location, linked referral if any). It does not display other
-   patients' data.
-3. The professional starts the consultation (`startConsultation(appointmentId,
-   professionalId)`).
-4. The system verifies the appointment's `status = CheckedIn` and the actor's
-   clinical authorisation, creates a `Consultation`, sets the appointment's
-   `status = InConsultation`, and logs the start (A6).
-5. The professional records the clinical information — observations,
-   diagnoses, treatment recommendations, and follow-up requirements if any
-   (`recordClinicalInformation(...)`) — this is UC-07, included here.
-6. The system stores it as the consultation's single `ClinicalRecord`,
-   attributed to the professional and timestamped.
-7. Where appropriate, the professional issues a prescription naming one or
-   more medications (`issuePrescription(...)`, extension 7 is optional —
-   step may be skipped or repeated).
-8. Where a follow-up is required, the professional requests a follow-up
-   appointment (`requestFollowUpAppointment(...)`, optional, see extension
-   9a).
-9. The professional completes the consultation (`completeConsultation(...)`).
-10. The system sets the appointment's `status = Completed`, records the
-    consultation end time, records the fee basis if the service is uninsured
-    (A5), logs completion, and displays the consultation summary.
+1. The referring professional asks to create a referral and identifies the
+   patient (`searchPatient(searchCriteria)`, reused from UC-02/UC-09 — A8.5).
+2. The system confirms the patient and shows the identity summary.
+3. The professional asks for the list of requestable specialties /
+   professionals (`getAvailableSpecialties()`), and selects a requested
+   specialty, or a specific requested professional, or both (FR-22 — at
+   least one is required, draft 02 §3).
+4. The professional enters the clinical reason and a priority (`Routine`,
+   `Urgent` or `Emergent`, A7.3) and creates the referral
+   (`createReferral(...)`).
+5. The system creates the `Referral` with `status = Draft`, associates it
+   with the patient and the referring professional, stores reason, priority,
+   requested specialty/professional, sets `issuedDate` to today and
+   `expiryDate` per A4 rule 2, and logs the creation.
+6. The professional reviews the referral summary and submits it
+   (`submitReferral(referralId)`).
+7. The system sets `status = Submitted`, logs the submission, and displays
+   the referral ID and status. The referral can now support appointments in
+   UC-02 (subject to A4) and may result in one or more appointments (FR-24).
 
 ### Extensions
 
-**4a. Appointment not found, or in the wrong status**
-- 4a1. `getAppointment(...)` finds nothing, or `startConsultation(...)` finds
-  `status` is `Requested`/`Confirmed` (not yet arrived), `Completed`,
-  `Cancelled` or `NoShow`.
-- 4a2. The system rejects the start with the appointment's actual status as
-  the reason. No `Consultation` is created. Ends in failure (or, for
-  `Confirmed`, see 4b).
+**2a. Unauthorised referrer**
+- 2a1. The person attempting to *author* the referral is not a
+  `HealthcareProfessional` (e.g. Administrative Staff trying to create a
+  referral in their own right, or a professional whose identity cannot be
+  verified).
+- 2a2. The system refuses creation with `outcome = AccessDenied`; no
+  `Referral` is created; the attempt is logged with actor + patient (A6).
+  Ends in failure. *(Administrative Staff entering an already-authored
+  external referral under 6a is not this extension — authorship still
+  belongs to the external professional named on it.)*
 
-**4b. Patient has not arrived / not checked in** *(the required failure case)*
-- 4b1. The appointment is `Confirmed` but arrival was never registered
-  (UC-05 / FR-16 never ran), so `status ≠ CheckedIn`.
-- 4b2. `startConsultation(...)` is rejected with reason
-  `PatientNotCheckedIn`. The system tells the professional the patient must
-  be registered as arrived by Administrative Staff first.
-- 4b3. No `Consultation` or `ClinicalRecord` is created; the appointment
-  stays `Confirmed`; the rejected attempt is logged (A6). The use case ends
-  in failure for this attempt. (Shown in the failure SSD.)
+**3a. Missing clinical reason** *(shown in the failure SSD)*
+- 3a1. `createReferral(...)` is submitted with an empty `clinicalReason`,
+  violating FR-22 and A4 rule 6.
+- 3a2. The system rejects it, naming the missing field. No `Referral` is
+  created (a reason-less draft would be clinical noise that UC-02 could
+  still pick up, so this draft rejects at creation rather than storing an
+  incomplete draft — a deliberate, stated choice).
+- 3a3. The actor supplies the reason and resubmits, resuming at step 4; or
+  abandons, in which case nothing exists and the rejection is logged.
 
-**5a. Actor not authorised for clinical information**
-- 5a1. The actor is not the assigned professional and holds no authorisation
-  for this patient's clinical information, or the actor's role is
-  `ADMINISTRATIVE_STAFF` (FR-29 — administrative access never includes
-  clinical access).
-- 5a2. Any of `startConsultation(...)`,
-  `recordClinicalInformation(...)` or `issuePrescription(...)` is rejected
-  with `outcome = AccessDenied`.
-- 5a3. **No clinical data is displayed or modified.** The denial, the actor
-  and the patient involved are written to the `ActivityLog` (A6) — a denied
-  attempt is exactly what the log exists to catch. Ends in failure.
+**4a. Invalid requested specialty**
+- 4a1. The selected specialty does not exist in the system, or no professional
+  in the system holds it.
+- 4a2. The system rejects creation with reason `InvalidSpecialty` (if the
+  specialty exists but currently has no professional, the system says exactly
+  that instead — the two situations need different follow-ups). No referral
+  is created. Resume at step 3 with a corrected selection.
 
-**8a. Prescription submitted with no medication**
-- 8a1. `issuePrescription(...)` is called with an empty medication list,
-  violating FR-19's “one or more medications” and the domain model's
-  `Prescription * — 1..* Medication` multiplicity (draft 02 §3).
-- 8a2. The system rejects it; no `Prescription` instance is created; the
-  consultation continues unaffected. The professional corrects the list and
-  resumes at step 7.
+**4b. Invalid requested professional**
+- 4b1. The named requested professional does not exist, or does not hold the
+  also-specified specialty when both were given.
+- 4b2. Same handling as 4a, reason `InvalidRequestedProfessional`. Resume at
+  step 3.
 
-**9a. Follow-up appointment requested** *(extension by condition, UC-02 `<<extend>>`)*
-- 9a1. `recordClinicalInformation(...)` included a follow-up requirement, and
-  the professional calls `requestFollowUpAppointment(consultationId,
-  followUpTimeframe, reason)`.
-- 9a2. The system records the requirement on the `ClinicalRecord` and creates
-  a follow-up booking request for the same patient + professional/specialty,
-  to be confirmed through UC-02's normal availability/referral checks (A2–A4
-  still apply — a follow-up inside a valid referral's validity needs no new
-  referral, A3). No slot is promised at this step.
+**5a. Patient not found**
+- 5a1. `searchPatient(...)` returns no match, or multiple matches with none
+  selected (A8.5).
+- 5a2. The actor is directed to UC-01 if the patient was never registered.
+  No referral is created. Use case ends in failure for this attempt.
 
-**9b. Uninsured service — fee basis**
-- 9b1. If the patient's coverage is `Uninsured` (A1/A5), the professional
-  records `feeAmount` for the service rendered before completing.
-- 9b2. Generating the invoice itself is UC-12, performed later by
-  Administrative Staff only (A5). UC-06 never creates an `Invoice`.
+**6a. External referring professional**
+- 6a1. The referral originates from a physician who does not practise at the
+  clinic (FR-23) — e.g. a paper/external request received by the clinic.
+- 6a2. A clinic user enters it on their behalf: the external physician is
+  recorded as `referringProfessional` with `isExternal = true` (created as a
+  professional record first if none exists). Authorship, reason and priority
+  are the external physician's as received; the entering user is recorded in
+  the `ActivityLog` as the actor (A6), keeping “who wrote it” and “who typed
+  it” distinguishable.
+- 6a3. Flow resumes at step 5 unchanged: an external origin changes none of
+  the FR-22 fields, validity rules (A4) or statuses (A7.2).
 
 ---
 
@@ -122,144 +116,103 @@ UC-06 *includes* UC-07 Record Clinical Information (draft 01 §5).
 
 ```plantuml
 @startuml
-actor "Healthcare Professional" as Actor
+actor "Healthcare Professional\n(Referring Professional)" as Actor
 participant ": ATS (System)" as System
 
-Actor -> System : getAppointment(appointmentId)
-System --> Actor : appointmentSummary(status = CheckedIn, patient, serviceType, location)
+Actor -> System : searchPatient(searchCriteria)
+System --> Actor : patientSummary(patientId, name, dateOfBirth, coverageType)
 
-Actor -> System : startConsultation(appointmentId, professionalId)
+Actor -> System : getAvailableSpecialties()
+System --> Actor : specialtyList(specialtyId, name, professionalsAvailable)
+
+Actor -> System : createReferral(patientId, referringProfessionalId, requestedSpecialtyId, requestedProfessionalId, clinicalReason, priority)
 note right of System
-  Verifies status = CheckedIn (A7.1) and
-  clinical authorisation (FR-28).
-  Creates Consultation;
-  Appointment.status becomes InConsultation;
-  start logged (A6).
+  Creates Referral with status = Draft,
+  issuedDate = today,
+  expiryDate per A4 rule 2 (issuedDate + 12 months
+  unless a shorter validity was set).
+  Creation logged (A6).
 end note
-System --> Actor : consultationStarted(consultationId)
+System --> Actor : referralCreated(referralId, status = Draft, expiryDate)
 
-Actor -> System : recordClinicalInformation(consultationId, observations, diagnoses, treatmentRecommendations, followUpRequirements)
-System --> Actor : clinicalRecordSaved(recordId)
-
-opt prescription needed
-  Actor -> System : issuePrescription(consultationId, medicationList)
-  System --> Actor : prescriptionIssued(prescriptionId)
-end
-
-opt follow-up required
-  Actor -> System : requestFollowUpAppointment(consultationId, followUpTimeframe, reason)
-  System --> Actor : followUpRequested(followUpRequestId)
-end
-
-Actor -> System : completeConsultation(consultationId)
-System --> Actor : consultationCompleted(appointmentStatus = Completed, consultationSummary)
+Actor -> System : submitReferral(referralId)
+System --> Actor : referralSubmitted(referralId, status = Submitted)
 @enduml
 ```
-<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 41 57 PM" src="https://github.com/user-attachments/assets/9a65f8e5-e197-4018-8bd2-7d8322f0abf3" />
+<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 43 09 PM" src="https://github.com/user-attachments/assets/7caa4720-fb26-4b6c-9823-458c0316c90d" />
 
 
-### 2.2 SSD — Failure scenario (patient not checked in; covers extension 4b, with 5a noted)
+### 2.2 SSD — Failure scenario (missing clinical reason; covers extension 3a)
 
 ```plantuml
 @startuml
-actor "Healthcare Professional" as Actor
+actor "Healthcare Professional\n(Referring Professional)" as Actor
 participant ": ATS (System)" as System
 
-Actor -> System : getAppointment(appointmentId)
-System --> Actor : appointmentSummary(status = Confirmed, patient, serviceType, location)
+Actor -> System : searchPatient(searchCriteria)
+System --> Actor : patientSummary(patientId, name, dateOfBirth, coverageType)
 
-Actor -> System : startConsultation(appointmentId, professionalId)
+Actor -> System : getAvailableSpecialties()
+System --> Actor : specialtyList(specialtyId, name, professionalsAvailable)
+
+Actor -> System : createReferral(patientId, referringProfessionalId, requestedSpecialtyId, requestedProfessionalId, clinicalReason = "", priority)
 note right of System
-  Check fails: Appointment.status is Confirmed,
-  not CheckedIn (arrival never registered, UC-05).
-  No Consultation instance is created,
-  no ClinicalRecord is created,
-  Appointment keeps status Confirmed,
-  rejected attempt is written to ActivityLog (A6).
+  Validation fails: clinicalReason is empty
+  (FR-22, A4 rule 6). No Referral instance
+  is created, nothing is stored as Draft,
+  rejection + reason written to ActivityLog (A6).
 end note
-System --> Actor : consultationRejected(reason = PatientNotCheckedIn)
+System --> Actor : referralRejected(reason = MissingClinicalReason)
 
 note over Actor, System
-  Failure equivalent for extension 5a (unauthorised actor):
-  the same startConsultation call returns
-  consultationRejected(reason = AccessDenied),
-  no clinical data is shown or changed,
-  and the denial is logged with actor + patientId.
+  Failure equivalents, same end state (nothing created, logged):
+  createReferral returns referralRejected(reason = InvalidSpecialty)
+  or (reason = InvalidRequestedProfessional) -- extensions 4a/4b;
+  and an unauthorised author is refused at the same call with
+  outcome AccessDenied -- extension 2a.
 end note
 @enduml
 ```
-<img width="869" height="569" alt="Screenshot 2026-10-23 at 10 42 12 PM" src="https://github.com/user-attachments/assets/694228b1-03f7-44bb-9fee-fb3b05cfbe0d" />
+<img width="846" height="532" alt="Screenshot 2026-10-23 at 10 44 03 PM" src="https://github.com/user-attachments/assets/753e0223-bd0e-41d4-bccf-9ee49d4bf546" />
 
 
 ### 2.3 System operations visible in these SSDs
 
 | # | Operation | Appears in |
 |---|---|---|
-| OP-06-1 | `getAppointment(appointmentId)` | Success + failure |
-| OP-06-2 | `startConsultation(appointmentId, professionalId)` | Success + failure |
-| OP-06-3 | `recordClinicalInformation(consultationId, observations, diagnoses, treatmentRecommendations, followUpRequirements [0..1])` | Success |
-| OP-06-4 | `issuePrescription(consultationId, medicationList)` | Success (optional) |
-| OP-06-5 | `requestFollowUpAppointment(consultationId, followUpTimeframe, reason)` | Success (optional) |
-| OP-06-6 | `completeConsultation(consultationId)` | Success |
-
-Patient identification before step 1, when needed, reuses
-`searchPatient(searchCriteria)` from UC-02 unchanged (draft 01 §5).
+| OP-08-1 | `searchPatient(searchCriteria)` | Success + failure (**shared with UC-02/UC-06 — identical name and signature**; its contract is CO-02-1 in draft 03 and is not duplicated here) |
+| OP-08-2 | `getAvailableSpecialties()` | Success + failure |
+| OP-08-3 | `createReferral(patientId, referringProfessionalId, requestedSpecialtyId [0..1], requestedProfessionalId [0..1], clinicalReason, priority)` | Success + failure |
+| OP-08-4 | `submitReferral(referralId)` | Success only |
 
 ---
 
 ## Part 3 — Operation contracts
 
-### Contract CO-06-1: `getAppointment`
+### Contract CO-08-2: `getAvailableSpecialties`
 
 | Field | Content |
 |---|---|
-| **Operation** | `getAppointment(appointmentId)` |
-| **Cross-References** | UC-06, UC-11; FR-28, FR-29, FR-30 |
-| **Preconditions** | An `Appointment` with `appointmentId` exists; actor is authenticated. If the appointment involves clinical context, actor's role permits seeing it (Administrative Staff see scheduling fields only, FR-29). |
-| **Postconditions** | – No instance was created, deleted or modified. – The appointment summary (patient, professional, location, service type, `status`, linked `Referral` if any) was returned, filtered to fields the actor's role may see. – An `ActivityLog` entry recording the access, including `patientId`, was created (A6). |
+| **Operation** | `getAvailableSpecialties()` |
+| **Cross-References** | UC-08; FR-06, FR-21, FR-22 |
+| **Preconditions** | Actor is authenticated in a role allowed to create referrals or enter external ones (precondition 1 of the use case). |
+| **Postconditions** | – No instance was created, deleted or modified. – The returned list contains every `Specialty` in the system, each with an indication of whether at least one (non-external) `HealthcareProfessional` holding it practises at the clinic — the information extensions 4a/4b need to be avoidable up front. |
 
-### Contract CO-06-2: `startConsultation`
-
-| Field | Content |
-|---|---|
-| **Operation** | `startConsultation(appointmentId, professionalId)` |
-| **Cross-References** | UC-06; FR-16, FR-17, FR-28 |
-| **Preconditions** | 1. The `Appointment` exists with `status = CheckedIn` (A7.1). 2. The actor is the assigned `HealthcareProfessional` (or otherwise authorised for this patient, FR-28) and is not acting in an `ADMINISTRATIVE_STAFF` role. 3. No other `Consultation` is already in progress for this appointment. |
-| **Postconditions (success)** | – A `Consultation` instance `c` was created and associated with the `Appointment` and with the conducting `HealthcareProfessional`. – `c.startDateTime` was set to the current time. – The appointment's `status` became `InConsultation`. – An `ActivityLog` entry (`outcome = Success`, patient identified) was created. |
-| **Postconditions (failure)** | – No `Consultation` was created; the appointment's status was unchanged. – An `ActivityLog` entry with `outcome = Failure` (`failureReason = PatientNotCheckedIn` / wrong status) or `outcome = AccessDenied` was created (extensions 4a/4b/5a). |
-
-### Contract CO-06-3: `recordClinicalInformation`
+### Contract CO-08-3: `createReferral`
 
 | Field | Content |
 |---|---|
-| **Operation** | `recordClinicalInformation(consultationId, observations, diagnoses, treatmentRecommendations, followUpRequirements [0..1])` |
-| **Cross-References** | UC-06, UC-07; FR-18, FR-28 |
-| **Preconditions** | The `Consultation` exists and is in progress (its appointment's `status = InConsultation`); actor is the conducting professional / authorised clinical user for this patient. |
-| **Postconditions** | – A `ClinicalRecord` instance was created (or, on a repeat call during the same consultation, the consultation's single existing `ClinicalRecord` was updated — there is never a second record for one consultation, draft 02 §3). – Its `observations`, `diagnoses`, `treatmentRecommendations` and `followUpRequirements` were set from the parameters, and `recordedDateTime` was set. – The `ClinicalRecord` was associated with exactly that `Consultation`. – An `ActivityLog` entry recording *that* clinical information was recorded (not its content, A6) was created. |
+| **Operation** | `createReferral(patientId, referringProfessionalId, requestedSpecialtyId [0..1], requestedProfessionalId [0..1], clinicalReason, priority)` |
+| **Cross-References** | UC-08; FR-21, FR-22, FR-23 |
+| **Preconditions** | 1. A `Patient` with `patientId` exists. 2. A `HealthcareProfessional` with `referringProfessionalId` exists (internal, or external with `isExternal = true`, A8.3) and is the author of this referral; the entering actor is that professional or is entering it on their behalf (extension 6a). An actor who is neither is denied (extension 2a). 3. `clinicalReason` is non-empty. 4. At least one of `requestedSpecialtyId`, `requestedProfessionalId` is supplied, and each supplied one exists; if both are supplied, the professional holds that specialty. 5. `priority` is one of `Routine`, `Urgent`, `Emergent` (A7.3). |
+| **Postconditions (success)** | – A `Referral` instance `r` was created. – `r` was associated with exactly one `Patient` (its subject) and exactly one referring `HealthcareProfessional`. – `r` was associated with the requested `Specialty` and/or requested `HealthcareProfessional` as supplied. – `r.clinicalReason` and `r.priority` were set from the parameters. – `r.status` became `Draft` (A7.2) — explicitly **not** yet valid for booking (A4 rule 1). – `r.issuedDate` was set to today and `r.expiryDate` to `issuedDate + 12 months`, unless a shorter explicit validity was supplied at creation (A4 rule 2). – An `ActivityLog` entry was created, recording the entering actor and, for external referrals, that entry was on behalf of the named external referrer (A6, extension 6a). |
+| **Postconditions (failure)** | – No `Referral` was created. – An `ActivityLog` entry with `outcome = Failure` (`MissingClinicalReason`, `InvalidSpecialty`, `InvalidRequestedProfessional`) or `outcome = AccessDenied` (extension 2a) was created. |
 
-### Contract CO-06-4: `issuePrescription`
-
-| Field | Content |
-|---|---|
-| **Operation** | `issuePrescription(consultationId, medicationList)` — each entry names a medication, dosage, frequency and duration |
-| **Cross-References** | UC-06; FR-19, FR-28. *(Electronic transmission to a pharmacy is out of scope, CON-03.)* |
-| **Preconditions** | The `Consultation` is in progress; actor is the conducting/authorised professional; `medicationList` contains **at least one** medication (extension 8a). |
-| **Postconditions** | – A `Prescription` instance was created, associated with the `Consultation`, with `issuedDateTime` set. – The prescription was associated with the 1..* `Medication` instances from `medicationList` (existing medications reused, new ones created with their dosage/frequency/duration recorded as prescribed). – An `ActivityLog` entry was created (A6). |
-
-### Contract CO-06-5: `requestFollowUpAppointment`
+### Contract CO-08-4: `submitReferral`
 
 | Field | Content |
 |---|---|
-| **Operation** | `requestFollowUpAppointment(consultationId, followUpTimeframe, reason)` |
-| **Cross-References** | UC-06, UC-02 (extend, draft 01 §5); FR-20 |
-| **Preconditions** | The `Consultation` is in progress or just completed by the same professional; a follow-up requirement exists in its `ClinicalRecord` or is supplied as `reason`. |
-| **Postconditions** | – The follow-up requirement was recorded/updated on the consultation's `ClinicalRecord.followUpRequirements`. – A follow-up booking request linking the same `Patient` and the professional/specialty was created in a pending state — **no** `TimeSlot` was reserved and **no** `Appointment` was confirmed by this operation; confirmation happens only through UC-02 with A2–A4 checks applied (extension 9a). – An `ActivityLog` entry was created. |
-
-### Contract CO-06-6: `completeConsultation`
-
-| Field | Content |
-|---|---|
-| **Operation** | `completeConsultation(consultationId)` |
-| **Cross-References** | UC-06; FR-17, FR-25 (fee basis), FR-30 |
-| **Preconditions** | The `Consultation` is in progress; its `ClinicalRecord` exists with at least observations and diagnoses recorded (CO-06-3 has run); if the service is uninsured, `feeAmount` has been recorded (extension 9b). |
-| **Postconditions** | – The consultation's `endDateTime` was set. – Its `Appointment.status` became `Completed` (A7.1). – If uninsured, `Consultation.feeAmount` is set, making the consultation ready for UC-12 invoicing by Administrative Staff (A5) — no `Invoice` was created by this operation. – An `ActivityLog` entry recording completion was created. |
+| **Operation** | `submitReferral(referralId)` |
+| **Cross-References** | UC-08, UC-02 (consumer of the result); FR-22, A4 |
+| **Preconditions** | A `Referral` with `referralId` exists with `status = Draft`; it still satisfies CO-08-3's field conditions (reason present, target present); the actor is its referring professional or entered it on their behalf. |
+| **Postconditions** | – The referral's `status` became `Submitted` (A7.2). – From this moment the referral satisfies A4 rule 1 and may be used by `requestAppointment(...)` in UC-02, and may subsequently be associated with one or more `Appointment`s (FR-24) without its status being changed by booking alone (A4 rule 5). – An `ActivityLog` entry recording the submission was created. |
