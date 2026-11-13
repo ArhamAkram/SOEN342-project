@@ -145,8 +145,8 @@ UC08 ..> UC09 : <<include>>
 UC06 ..> UC07 : <<include>>
 
 ' ---- Extend relationships ----
-UC02 ..> UC08 : <<extend>>\n[no valid referral:\nreferral must be created first]
-UC06 ..> UC02 : <<extend>>\n[follow-up required:\nbook follow-up appointment]
+UC08 ..> UC02 : <<extend>>\n[no valid referral:\nreferral must be created first]
+UC02 ..> UC06 : <<extend>>\n[follow-up required:\nbook follow-up appointment]
 
 note bottom of LogActivity
   <<include>> from UC-01, UC-02, UC-05,
@@ -204,13 +204,14 @@ end note
   (UC-02 extension 5a, file 03), a referral must be created first. UC-08 is
   not part of normal booking, so this is conditional — an extend, pointing
   from the extending use case (UC-08) to the base (UC-02) in UML notation,
-  written in the PlantUML above as `UC02 ..> UC08` with the condition labelled;
+  written in the PlantUML above as `UC08 ..> UC02` with the condition labelled;
   when you redraw this in a graphical tool, keep the condition text with it.
 - **UC-06 `<<extend>>` by UC-02, condition [follow-up required]** — FR-20: a
   follow-up appointment is booked only when the professional records a
   follow-up requirement during the consultation (file 04,
   `requestFollowUpAppointment(...)`). Most consultations do not, so booking
-  cannot be an include of UC-06.
+  cannot be an include of UC-06. The arrow points from the extending use
+  case (UC-02) to the base (UC-06): `UC02 ..> UC06`.
 
 **Why there is no actor generalisation.** An earlier version drew
 `Referring Professional` as a specialisation of `Healthcare Professional`,
